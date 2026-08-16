@@ -1,69 +1,70 @@
 import Image from "next/image";
-import styles from "./page.module.css";
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    const exampleUsername = "Mainao";
+
+    return (
+        <main
+            style={{
+                fontFamily: "Courier New, monospace",
+                background: "#F3EEE3",
+                minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                padding: "4rem 1rem",
+                gap: "1.5rem",
+            }}
+        >
+            <h1 style={{ fontSize: "1.5rem", letterSpacing: "2px" }}>
+                readme-receipt
+            </h1>
+            <p style={{ color: "#8A8574", maxWidth: 420, textAlign: "center" }}>
+                Your GitHub stats, itemized like a receipt. Drop this into your
+                profile README.
+            </p>
+
             <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+                src={`/api/receipt?username=${exampleUsername}`}
+                alt="Example receipt widget"
+                width={340}
+                height={620}
+                unoptimized
+                loading="eager"
             />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+
+            <div
+                style={{
+                    background: "#fff",
+                    border: "1px solid #D8D2C0",
+                    borderRadius: 8,
+                    padding: "1rem",
+                    maxWidth: 500,
+                    fontSize: "0.85rem",
+                }}
+            >
+                <p style={{ marginBottom: "0.5rem" }}>
+                    Embed in your own README:
+                </p>
+                <code
+                    style={{
+                        display: "block",
+                        background: "#F3EEE3",
+                        padding: "0.75rem",
+                        borderRadius: 4,
+                        wordBreak: "break-all",
+                    }}
+                >
+                    {`<img src="${process.env.NEXT_PUBLIC_SITE_URL ?? "https://your-deployment.vercel.app"}/api/receipt?username=YOUR_USERNAME" />`}
+                </code>
+            </div>
+
+            <a
+                href="https://github.com/YOUR_USERNAME/readme-receipt"
+                style={{ color: "#2DA44E" }}
+            >
+                View source on GitHub →
+            </a>
+        </main>
+    );
 }
