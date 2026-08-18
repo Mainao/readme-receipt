@@ -45,12 +45,11 @@ function buildStamp(
     cx: number,
     cy: number,
 ): string {
-    const size = 22;
-    const gap = 6;
+    const size = 14; // was 22
+    const gap = 4; // was 6
     const cols = 5;
     const startX = cx - (cols * (size + gap) - gap) / 2;
-    const rowY = [cy - 36, cy - 36 + size + gap];
-    const clipId = `stamp-clip-${cx}-${cy}`; // unique id in case buildStamp is ever called more than once
+    const rowY = [cy - 28, cy - 28 + size + gap]; // was cy - 36
 
     const squares = last10Days
         .map((day, i) => {
@@ -58,7 +57,7 @@ function buildStamp(
             const col = i % 5;
             const x = startX + col * (size + gap);
             const y = rowY[row];
-            return `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="3" fill="${levelColor(day.count)}"/>`;
+            return `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="2" fill="${levelColor(day.count)}"/>`;
         })
         .join("");
 
@@ -66,16 +65,9 @@ function buildStamp(
       <g transform="rotate(-10 ${cx} ${cy})">
         <circle cx="${cx}" cy="${cy}" r="70" fill="none" stroke="${STAMP_GREEN}" stroke-width="3" opacity="0.85"/>
         <circle cx="${cx}" cy="${cy}" r="58" fill="none" stroke="${STAMP_GREEN}" stroke-width="1.2" opacity="0.6"/>
-        <defs>
-          <clipPath id="${clipId}">
-            <circle cx="${cx}" cy="${cy}" r="54"/>
-          </clipPath>
-        </defs>
-        <g clip-path="url(#${clipId})">
-          ${squares}
-        </g>
-        <text x="${cx}" y="${cy + 46}" text-anchor="middle" font-family="Courier New, monospace"
-              font-size="15" font-weight="700" fill="${STAMP_GREEN}" opacity="0.85" letter-spacing="1.5">COMMITTED</text>
+        ${squares}
+              <text x="${cx}" y="${cy + 34}" text-anchor="middle" font-family="Courier New, monospace"
+            font-size="13" font-weight="700" fill="${STAMP_GREEN}" opacity="0.85" letter-spacing="1">COMMITTED</text>
       </g>
     `;
 }
