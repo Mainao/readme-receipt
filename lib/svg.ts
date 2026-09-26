@@ -1,18 +1,10 @@
-import { ReceiptStats, DayContribution } from "./types";
+import { ReceiptStats } from "./types";
 
-const PAPER = "#FAF6EC";
-const INK = "#3A362E";
-const MUTED = "#8A8574";
-const DASH = "#B9B29E";
-const STAMP_GREEN = "#2DA44E";
-
-function levelColor(count: number): string {
-    if (count <= 0) return "#EBEDF0";
-    if (count < 3) return "#9BE9A8";
-    if (count < 6) return "#40C463";
-    if (count < 9) return "#30A14E";
-    return "#216E39";
-}
+const PINK = "#F6C7D8";
+const PAPER = "#FFFFFF";
+const INK = "#2B2B2B";
+const MUTED = "#4A4A4A";
+const DOT = "#2B2B2B";
 
 function escapeXml(input: string): string {
     return input
@@ -23,122 +15,163 @@ function escapeXml(input: string): string {
         .replace(/'/g, "&apos;");
 }
 
-function receiptOutlinePath(
-    width: number,
-    height: number,
+/** A rect with a zigzag "torn paper" edge on the top AND bottom, straight sides. */
+function tornEdgeRectPath(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
     teeth: number,
+    depth: number,
 ): string {
-    const bottomY = height - 30;
-    const step = width / teeth;
-    let d = `M0 0 H${width} V${bottomY}`;
+    const step = w / teeth;
+    let d = `M${x} ${y + depth}`;
+
     for (let i = 0; i < teeth; i++) {
-        const xDown = width - (i + 0.5) * step;
-        const xUp = width - (i + 1) * step;
-        d += ` L${xDown} ${bottomY + 10} L${xUp} ${bottomY}`;
+        const xMid = x + (i + 0.5) * step;
+        const xEnd = x + (i + 1) * step;
+        d += ` L${xMid} ${y} L${xEnd} ${y + depth}`;
     }
-    d += " Z";
+
+    d += ` L${x + w} ${y + h - depth}`;
+
+    for (let i = teeth - 1; i >= 0; i--) {
+        const xMid = x + (i + 0.5) * step;
+        const xStart = x + i * step;
+        d += ` L${xMid} ${y + h} L${xStart} ${y + h - depth}`;
+    }
+
+    d += ` L${x} ${y + depth} Z`;
     return d;
 }
 
-function buildStamp(
-    last10Days: DayContribution[],
-    cx: number,
-    cy: number,
-): string {
-    const size = 14; // was 22
-    const gap = 4; // was 6
-    const cols = 5;
-    const startX = cx - (cols * (size + gap) - gap) / 2;
-    const rowY = [cy - 28, cy - 28 + size + gap]; // was cy - 36
-
-    const squares = last10Days
-        .map((day, i) => {
-            const row = i < 5 ? 0 : 1;
-            const col = i % 5;
-            const x = startX + col * (size + gap);
-            const y = rowY[row];
-            return `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="2" fill="${levelColor(day.count)}"/>`;
-        })
-        .join("");
-
-    return `
-      <g transform="rotate(-10 ${cx} ${cy})">
-        <circle cx="${cx}" cy="${cy}" r="70" fill="none" stroke="${STAMP_GREEN}" stroke-width="3" opacity="0.85"/>
-        <circle cx="${cx}" cy="${cy}" r="58" fill="none" stroke="${STAMP_GREEN}" stroke-width="1.2" opacity="0.6"/>
-        ${squares}
-              <text x="${cx}" y="${cy + 34}" text-anchor="middle" font-family="Courier New, monospace"
-            font-size="13" font-weight="700" fill="${STAMP_GREEN}" opacity="0.85" letter-spacing="1">COMMITTED</text>
-      </g>
-    `;
-}
-
 export function buildReceiptSVG(stats: ReceiptStats): string {
-    const width = 340;
-    const height = 620;
-    const now = new Date();
-    const timestamp = now.toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-    });
+    const width = 380;
+    const inset = 26;
+    const innerX = inset;
+    const innerW = width - inset * 2;
+    const innerLeft = innerX + 22;
+    const innerRight = innerX + innerW - 22;
+    const centerX = width / 2;
+    const teeth = 11;
+    const toothDepth = 10;
 
-    const items = [
-        ["COMMITS", stats.totalCommits],
-        ["PULL REQS", stats.totalPRs],
-        ["ISSUES", stats.totalIssues],
-        ["STARS EARNED", stats.totalStars],
-        ["REPOS OWNED", stats.activeRepoCount],
-    ] as const;
+    const items: Array<[string, string]> = [
+        ["Commits", String(stats.totalCommits)],
+        ["Pull Requests", String(stats.totalPRs)],
+        ["Issues Closed", String(stats.totalIssues)],
+        ["Stars Earned", String(stats.totalStars)],
+        ["Repos Owned", String(stats.activeRepoCount)],
+        ["Current Streak", `${stats.currentStreak} days`],
+    ];
 
-    const itemsSvg = items
-        .map(
-            ([label, value], i) => `
-        <text x="24" y="${118 + i * 24}" font-family="Courier New, monospace" font-size="13" fill="${INK}">${label}</text>
-        <text x="${width - 24}" y="${118 + i * 24}" text-anchor="end" font-family="Courier New, monospace" font-size="13" fill="${INK}">${value}</text>
-      `,
-        )
-        .join("");
+    let y = inset;
+    const innerYPlaceholder = inset;
+    y = innerYPlaceholder;
+
+    const parts: string[] = [];
+
+    y += 52;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-size="23" font-weight="700" fill="${INK}">GitHub Activity</text>`,
+    );
+    y += 28;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-size="23" font-weight="700" fill="${INK}">Receipt</text>`,
+    );
+
+    y += 24;
+    parts.push(
+        `<line x1="${innerLeft}" y1="${y}" x2="${innerRight}" y2="${y}" stroke="${INK}" stroke-width="1.5"/>`,
+    );
+
+    y += 32;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="${MUTED}">A snapshot of recent GitHub activity</text>`,
+    );
+    y += 22;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="${MUTED}">Serving Size: 1 Developer</text>`,
+    );
+
+    y += 36;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="14" fill="${INK}">Amount Per Commit</text>`,
+    );
+    y += 18;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="11" fill="${MUTED}">(stats fetched live from GitHub)</text>`,
+    );
+
+    y += 18;
+    parts.push(
+        `<line x1="${innerLeft}" y1="${y}" x2="${innerRight}" y2="${y}" stroke="${INK}" stroke-width="1"/>`,
+    );
+
+    y += 30;
+    for (const [label, value] of items) {
+        const charWidth = 7.6;
+        const labelWidth = label.length * charWidth;
+        const lineStart = innerLeft + labelWidth + 8;
+        const lineEnd = innerRight - 62;
+
+        parts.push(`
+      <text x="${innerLeft}" y="${y}" font-family="Courier New, monospace" font-size="13" fill="${INK}">${escapeXml(
+          label,
+      )}</text>
+      <line x1="${lineStart}" y1="${y - 4}" x2="${lineEnd}" y2="${y - 4}"
+            stroke="${DOT}" stroke-width="1.5" stroke-dasharray="1.5 3.5" opacity="0.7"/>
+      <text x="${innerRight}" y="${y}" text-anchor="end" font-family="Courier New, monospace" font-size="13" fill="${INK}">${escapeXml(
+          value,
+      )}</text>
+    `);
+        y += 30;
+    }
+
+    y += 8;
+    parts.push(
+        `<line x1="${innerLeft}" y1="${y}" x2="${innerRight}" y2="${y}" stroke="${INK}" stroke-width="1"/>`,
+    );
+    y += 16;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="9.5" fill="${MUTED}">**Streaks reset if a day passes with no activity.</text>`,
+    );
+
+    y += 40;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="14" fill="${INK}">Thanks for stopping by!</text>`,
+    );
+    y += 24;
+    parts.push(
+        `<text x="${centerX}" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="14" fill="${INK}">@${escapeXml(
+            stats.username,
+        )}</text>`,
+    );
+
+    const innerH = y - innerYPlaceholder + 34;
+    const height = innerYPlaceholder * 2 + innerH;
+
+    const body = `
+    <rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="${PINK}"/>
+    <path d="${tornEdgeRectPath(innerX, innerYPlaceholder, innerW, innerH, teeth, toothDepth)}" fill="${PAPER}"/>
+    ${parts.join("\n")}
+  `;
 
     return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <title>${escapeXml(stats.username)}'s GitHub receipt</title>
-  <g transform="rotate(-1 ${width / 2} ${height / 2})">
-    <path d="${receiptOutlinePath(width, height, 12)}" fill="${PAPER}" stroke="${DASH}" stroke-width="1"/>
-
-    <text x="${width / 2}" y="42" text-anchor="middle" font-family="Courier New, monospace" font-size="16" fill="${INK}" letter-spacing="2">* GITHUB RECEIPT *</text>
-    <text x="${width / 2}" y="64" text-anchor="middle" font-family="Courier New, monospace" font-size="13" fill="${INK}">@${escapeXml(stats.username)}</text>
-    <text x="${width / 2}" y="82" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="${MUTED}">${timestamp}</text>
-
-    <line x1="24" y1="94" x2="${width - 24}" y2="94" stroke="${DASH}" stroke-width="1" stroke-dasharray="4 4"/>
-
-    ${itemsSvg}
-
-    <line x1="24" y1="232" x2="${width - 24}" y2="232" stroke="${DASH}" stroke-width="1" stroke-dasharray="4 4"/>
-
-    <text x="24" y="256" font-family="Courier New, monospace" font-size="15" fill="${INK}">TOTAL CONTRIB.</text>
-    <text x="${width - 24}" y="256" text-anchor="end" font-family="Courier New, monospace" font-size="15" fill="${INK}">${stats.totalContributions}</text>
-    <text x="24" y="278" font-family="Courier New, monospace" font-size="12" fill="${MUTED}">CURRENT STREAK</text>
-    <text x="${width - 24}" y="278" text-anchor="end" font-family="Courier New, monospace" font-size="12" fill="${MUTED}">${stats.currentStreak} DAYS</text>
-
-    <line x1="24" y1="296" x2="${width - 24}" y2="296" stroke="${DASH}" stroke-width="1" stroke-dasharray="4 4"/>
-
-    <text x="24" y="320" font-family="Courier New, monospace" font-size="12" fill="${INK}">PAID WITH: ${escapeXml(stats.topLanguage)}</text>
-
-    ${buildStamp(stats.last10Days, width - 90, 440)}
-
-    <text x="${width / 2}" y="560" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="${MUTED}" letter-spacing="1">thanks for stopping by ~</text>
-  </g>
+  ${body}
 </svg>`;
 }
 
+/** Fallback shown when a username is invalid or the GitHub API call fails. */
 export function buildErrorSVG(message: string): string {
-    const width = 340;
-    const height = 200;
+    const width = 380;
+    const height = 220;
     return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${width}" height="${height}" fill="${PAPER}" stroke="${DASH}" stroke-width="1"/>
-  <text x="${width / 2}" y="70" text-anchor="middle" font-family="Courier New, monospace" font-size="15" fill="${INK}">* RECEIPT ERROR *</text>
-  <text x="${width / 2}" y="100" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="${MUTED}">${escapeXml(
+  <rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="${PINK}"/>
+  <rect x="20" y="20" width="${width - 40}" height="${height - 40}" fill="${PAPER}"/>
+  <text x="${width / 2}" y="${height / 2 - 10}" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="16" fill="${INK}">Receipt Error</text>
+  <text x="${width / 2}" y="${height / 2 + 14}" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="11" fill="${MUTED}">${escapeXml(
       message,
   )}</text>
 </svg>`;
